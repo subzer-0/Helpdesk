@@ -1,5 +1,37 @@
-import type { Email, Job, Message, Ticket, User } from "./types";
+import type { Email, Job, Message, Settings, Ticket, User } from "./types";
 import { seedEmails, seedJobs, seedTickets, seedUsers } from "./seed";
+
+const DEFAULT_SETTINGS: Settings = {
+  orgName: "HelpDesk",
+  supportEmail: "support@helpdesk.io",
+  fromName: "HelpDesk Support",
+  emailProvider: "resend",
+  emailApiKey: "",
+  inboundDomain: "helpdesk.io",
+  aiEnabled: true,
+  aiAutoResolveEnabled: true,
+  aiAutoResolveThreshold: 0.8,
+  aiDefaultTone: "friendly",
+  notifyOnNewTicket: true,
+  notifyOnUrgent: true,
+  businessHoursStart: "09:00",
+  businessHoursEnd: "17:00",
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  replySignature: "— The HelpDesk team\n{{support_email}}",
+  autoAckEnabled: true,
+  autoAckSubject: "We got your message [#{{ticket_id}}]",
+  autoAckBody:
+    "Hi {{customer_name}},\n\nThanks for reaching out to {{org_name}}. We've opened ticket #{{ticket_id}} and a member of our team will get back to you shortly.\n\nIn the meantime, you can reply to this email and we'll add your message to the conversation.",
+  outOfHoursEnabled: false,
+  outOfHoursBody:
+    "Hi {{customer_name}},\n\nThanks for your message — our team is currently outside of business hours. We'll reply as soon as we're back online tomorrow. Your ticket #{{ticket_id}} is logged and waiting.",
+  resolvedFollowUpEnabled: true,
+  resolvedFollowUpBody:
+    "Hi {{customer_name}},\n\nGlad we could help — your ticket #{{ticket_id}} is now resolved. If anything else comes up, just reply to this email and we'll re-open it.\n\nHow did we do? We'd love your feedback.",
+  aiReplyEnabled: true,
+  aiReplyInstructions:
+    "You are a support agent for {{org_name}}. Be friendly, concise, and solution-oriented. Greet the customer by first name. If you don't know the answer, say so and route to a human. Never invent policies or prices. Sign off with the team signature.",
+};
 
 type State = {
   users: User[];
@@ -7,6 +39,7 @@ type State = {
   messages: Message[];
   emails: Email[];
   jobs: Job[];
+  settings: Settings;
 };
 
 const KEY = "helpdesk_state_v1";
@@ -14,7 +47,11 @@ const KEY = "helpdesk_state_v1";
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as State;
+    if (raw) {
+      const parsed = JSON.parse(raw) as State;
+      // backfill settings for older saved state
+      return { ...parsed, settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) } };
+    }
   } catch {
     // ignore
   }
@@ -25,6 +62,7 @@ function load(): State {
     messages,
     emails: seedEmails,
     jobs: seedJobs,
+    settings: DEFAULT_SETTINGS,
   };
   localStorage.setItem(KEY, JSON.stringify(initial));
   return initial;
@@ -47,6 +85,13 @@ export const store = {
   resetSeed() {
     localStorage.removeItem(KEY);
     state = load();
+    persist();
+  },
+
+  // ------------------ settings ------------------
+  getSettings: () => state.settings,
+  updateSettings(patch: Partial<Settings>) {
+    state.settings = { ...state.settings, ...patch };
     persist();
   },
 

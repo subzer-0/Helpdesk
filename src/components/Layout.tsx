@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   Headphones,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
@@ -23,9 +24,10 @@ const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
-  { to: "/workflow", label: "Workflow", icon: WorkflowIcon, roles: ["admin", "agent"] },
+  { to: "/workflow", label: "Workflow", icon: WorkflowIcon, roles: ["admin"] },
   { to: "/email", label: "Email", icon: Mail, roles: ["admin", "agent"] },
   { to: "/jobs", label: "Background jobs", icon: Cpu, roles: ["admin", "agent"] },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, roles: ["admin"] },
 ];
 
 export function Layout() {
@@ -119,7 +121,7 @@ export function Layout() {
       </main>
 
       <footer className="mx-auto w-full max-w-[1400px] px-4 py-6 text-center text-xs text-slate-500">
-        HelpDesk · AI-powered customer support · Demo build
+        HelpDesk · AI-powered customer support · (c) siteLABS. All rights reserved.
       </footer>
     </div>
   );

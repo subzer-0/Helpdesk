@@ -64,6 +64,34 @@ export type Email = {
   status: "received" | "ingested" | "sent" | "failed";
 };
 
+export type Settings = {
+  orgName: string;
+  supportEmail: string;
+  fromName: string;
+  emailProvider: "resend" | "postmark" | "sendgrid" | "mailgun" | "smtp";
+  emailApiKey: string;
+  inboundDomain: string;
+  aiEnabled: boolean;
+  aiAutoResolveEnabled: boolean;
+  aiAutoResolveThreshold: number; // 0..1
+  aiDefaultTone: "friendly" | "formal" | "empathetic";
+  notifyOnNewTicket: boolean;
+  notifyOnUrgent: boolean;
+  businessHoursStart: string; // "09:00"
+  businessHoursEnd: string; // "17:00"
+  timezone: string;
+  replySignature: string;
+  autoAckEnabled: boolean;
+  autoAckSubject: string;
+  autoAckBody: string;
+  outOfHoursEnabled: boolean;
+  outOfHoursBody: string;
+  resolvedFollowUpEnabled: boolean;
+  resolvedFollowUpBody: string;
+  aiReplyEnabled: boolean;
+  aiReplyInstructions: string;
+};
+
 export type Job = {
   id: string;
   type:
