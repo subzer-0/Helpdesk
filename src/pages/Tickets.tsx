@@ -1,19 +1,22 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Trash2 } from "lucide-react";
-import { store, useStore } from "../lib/store";
 import { useAuth } from "../lib/auth";
 import { PriorityBadge, StatusBadge } from "../components/Badges";
 import { Avatar } from "../components/Avatar";
 import { relativeTime } from "../lib/format";
 import { Modal } from "../components/Modal";
-import type { TicketCategory, TicketPriority, TicketStatus } from "../lib/types";
+import { api } from "../lib/api";
+import type { Ticket, TicketPriority, TicketStatus, User } from "../lib/types";
 
 export default function Tickets() {
   const { user } = useAuth();
-  const tickets = useStore((s) => s.tickets);
-  const users = useStore((s) => s.users);
   const nav = useNavigate();
+
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | TicketStatus>("all");
@@ -21,34 +24,51 @@ export default function Tickets() {
   const [assignee, setAssignee] = useState<"all" | "unassigned" | string>("all");
   const [showNew, setShowNew] = useState(false);
 
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [ticketItems, userItems] = await Promise.all([
+        api.listTickets({
+          q: q || undefined,
+          status: status === "all" ? undefined : status,
+          priority: priority === "all" ? undefined : priority,
+          assigneeId: assignee === "all" || assignee === "unassigned" ? undefined : assignee,
+        }),
+        api.listUsers().catch(() => []),
+      ]);
+      setTickets(
+        assignee === "unassigned"
+          ? ticketItems.filter((t) => !t.assigneeId)
+          : ticketItems,
+      );
+      setUsers(userItems);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, status, priority, assignee]);
+
   const visible = useMemo(() => {
     let arr = tickets;
     if (user?.role === "customer") arr = arr.filter((t) => t.customerId === user.id);
-    if (status !== "all") arr = arr.filter((t) => t.status === status);
-    if (priority !== "all") arr = arr.filter((t) => t.priority === priority);
-    if (assignee === "unassigned") arr = arr.filter((t) => !t.assigneeId);
-    else if (assignee !== "all") arr = arr.filter((t) => t.assigneeId === assignee);
-    if (q) {
-      const ql = q.toLowerCase();
-      arr = arr.filter(
-        (t) =>
-          t.subject.toLowerCase().includes(ql) ||
-          t.customerName.toLowerCase().includes(ql) ||
-          t.tags.some((tag) => tag.includes(ql)) ||
-          t.id.includes(ql),
-      );
-    }
     return arr;
-  }, [tickets, q, status, priority, assignee, user]);
+  }, [tickets, user]);
 
-  const agents = users.filter((u) => u.role === "agent");
+  const agents = users.filter((u) => u.role === "agent" || u.role === "admin");
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tickets</h1>
-          <p className="text-sm text-slate-500">{visible.length} of {tickets.length}</p>
+          <p className="text-sm text-slate-500">{visible.length} tickets</p>
         </div>
         <button className="btn-primary" onClick={() => setShowNew(true)}>
           <Plus size={16} /> New ticket
@@ -61,7 +81,7 @@ export default function Tickets() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               className="input pl-9"
-              placeholder="Search by subject, customer, tag, or ID…"
+              placeholder="Search by subject, customer, or ID…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -94,6 +114,8 @@ export default function Tickets() {
         </div>
       </div>
 
+      {error && <div className="card p-4 text-sm text-red-600">{error}</div>}
+
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -109,7 +131,7 @@ export default function Tickets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {visible.map((t) => (
+              {!loading && visible.map((t) => (
                 <tr
                   key={t.id}
                   onClick={() => nav(`/tickets/${t.id}`)}
@@ -117,18 +139,7 @@ export default function Tickets() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">{t.subject}</div>
-                    <div className="text-xs text-slate-500">
-                      {t.id} · {t.category.replace("_", " ")}
-                      {t.tags.length > 0 && (
-                        <span className="ml-2">
-                          {t.tags.map((tag) => (
-                            <span key={tag} className="badge mr-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                              {tag}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </div>
+                    <div className="text-xs text-slate-500">{t.id}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -153,9 +164,11 @@ export default function Tickets() {
                     <td className="px-4 py-3 text-right">
                       <button
                         className="btn-ghost p-1 text-red-600"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete ticket "${t.subject}"?`)) store.deleteTicket(t.id);
+                          if (!confirm(`Delete ticket "${t.subject}"?`)) return;
+                          await api.deleteTicket(t.id);
+                          await load();
                         }}
                         aria-label="Delete"
                       >
@@ -165,7 +178,14 @@ export default function Tickets() {
                   )}
                 </tr>
               ))}
-              {visible.length === 0 && (
+              {loading && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
+                    Loading tickets...
+                  </td>
+                </tr>
+              )}
+              {!loading && visible.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
                     No tickets match your filters.
@@ -177,41 +197,67 @@ export default function Tickets() {
         </div>
       </div>
 
-      <NewTicketModal open={showNew} onClose={() => setShowNew(false)} />
+      <NewTicketModal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        users={users}
+        onCreated={(id) => {
+          setShowNew(false);
+          nav(`/tickets/${id}`);
+        }}
+      />
     </div>
   );
 }
 
-function NewTicketModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function NewTicketModal({
+  open,
+  onClose,
+  users,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  users: User[];
+  onCreated: (id: string) => void;
+}) {
   const { user } = useAuth();
-  const nav = useNavigate();
-  const users = useStore((s) => s.users);
   const customers = users.filter((u) => u.role === "customer");
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState<TicketPriority>("medium");
-  const [category, setCategory] = useState<TicketCategory>("general");
-  const [customerId, setCustomerId] = useState(user?.role === "customer" ? user.id : customers[0]?.id ?? "");
+  const [customerId, setCustomerId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function submit() {
-    const customer = users.find((u) => u.id === customerId);
-    if (!customer || !subject.trim()) return;
-    const t = store.createTicket({
-      subject: subject.trim(),
-      body: body.trim() || subject.trim(),
-      customerId: customer.id,
-      customerName: customer.name,
-      customerEmail: customer.email,
-      priority,
-      category,
-      source: "web",
-    });
-    // enqueue classify + summarize jobs
-    store.enqueueJob({ type: "classify_ticket", payload: { ticketId: t.id } });
-    store.enqueueJob({ type: "summarize_ticket", payload: { ticketId: t.id } });
-    onClose();
-    nav(`/tickets/${t.id}`);
+  useEffect(() => {
+    if (open) {
+      setSubject("");
+      setBody("");
+      setPriority("medium");
+      setCustomerId(customers[0]?.id ?? "");
+      setError(null);
+    }
+  }, [open, customers]);
+
+  async function submit() {
+    if (!subject.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const t = await api.createTicket({
+        subject: subject.trim(),
+        description: body.trim() || subject.trim(),
+        priority,
+        requesterId: user?.role === "customer" ? user.id : customerId || undefined,
+      });
+      onCreated(t.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -222,7 +268,7 @@ function NewTicketModal({ open, onClose }: { open: boolean; onClose: () => void 
       footer={
         <>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={submit} disabled={!subject.trim()}>Create</button>
+          <button className="btn-primary" onClick={submit} disabled={!subject.trim() || saving}>Create</button>
         </>
       }
     >
@@ -231,6 +277,7 @@ function NewTicketModal({ open, onClose }: { open: boolean; onClose: () => void 
           <div>
             <label className="label">Customer</label>
             <select className="input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <option value="">Use my account</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} · {c.email}</option>
               ))}
@@ -245,33 +292,17 @@ function NewTicketModal({ open, onClose }: { open: boolean; onClose: () => void 
           <label className="label">Description</label>
           <textarea className="input min-h-[120px]" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Describe what's going on…" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">Priority</label>
-            <select className="input" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Category</label>
-            <select className="input" value={category} onChange={(e) => setCategory(e.target.value as TicketCategory)}>
-              <option value="general">General</option>
-              <option value="billing">Billing</option>
-              <option value="technical">Technical</option>
-              <option value="account">Account</option>
-              <option value="bug">Bug</option>
-              <option value="feature_request">Feature request</option>
-            </select>
-          </div>
+        <div>
+          <label className="label">Priority</label>
+          <select className="input" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
         </div>
-        <p className="text-xs text-slate-500">
-          The AI will classify and summarize this ticket in the background.
-        </p>
+        {error && <p className="text-xs text-red-600">{error}</p>}
       </div>
     </Modal>
   );
 }
-

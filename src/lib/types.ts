@@ -1,11 +1,15 @@
-export type Role = "admin" | "agent" | "customer";
+// Staff roles — the only identities that can sign in to the app.
+export type Role = "admin" | "agent";
+
+// Data role — also covers ticket requesters who never log in.
+export type UserRole = Role | "customer";
 
 export type User = {
   id: string;
   name: string;
   email: string;
   password: string; // mock — never do this in real life
-  role: Role;
+  role: UserRole;
   avatarColor: string;
   createdAt: string;
 };
@@ -25,7 +29,7 @@ export type Message = {
   ticketId: string;
   authorId: string;
   authorName: string;
-  authorRole: Role | "ai" | "system";
+  authorRole: UserRole | "ai" | "system";
   body: string;
   createdAt: string;
   channel: "web" | "email" | "ai";

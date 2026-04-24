@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { store } from "./store";
+import { api } from "./api";
 import type { Role, User } from "./types";
 
 type AuthCtx = {
@@ -11,46 +11,39 @@ type AuthCtx = {
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
-const KEY = "helpdesk_session";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const id = JSON.parse(raw) as string;
-      const u = store.getUser(id);
-      if (u) setUser(u);
-    }
+    api.me().then(
+      (u) => setUser(u),
+      () => setUser(null),
+    );
   }, []);
 
   const value = useMemo<AuthCtx>(
     () => ({
       user,
       async login(email, password) {
-        const u = store.findUserByEmail(email);
-        if (!u) return { ok: false, error: "No account with that email." };
-        if (u.password !== password) return { ok: false, error: "Wrong password." };
-        localStorage.setItem(KEY, JSON.stringify(u.id));
-        setUser(u);
-        return { ok: true };
+        try {
+          const u = await api.login(email, password);
+          if (u.role !== "admin" && u.role !== "agent") {
+            await api.logout();
+            return { ok: false, error: "This workspace is staff-only." };
+          }
+          setUser(u);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: (e as Error).message || "Invalid credentials." };
+        }
       },
       async signup(input) {
-        if (store.findUserByEmail(input.email)) return { ok: false, error: "Email already in use." };
-        const u = store.createUser({
-          name: input.name,
-          email: input.email,
-          password: input.password,
-          role: input.role,
-        });
-        localStorage.setItem(KEY, JSON.stringify(u.id));
-        setUser(u);
-        return { ok: true };
+        void input;
+        return { ok: false, error: "Signup is disabled in this staff workspace." };
       },
       logout() {
-        localStorage.removeItem(KEY);
-        setUser(null);
+        api.logout().finally(() => setUser(null));
       },
     }),
     [user],

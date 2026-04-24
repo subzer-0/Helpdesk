@@ -4,7 +4,7 @@ const STEPS = [
   {
     icon: Mail,
     title: "1. Inbound",
-    body: "Customer sends an email or opens a ticket on the web. The email integration ingests it and creates a ticket record with `source = email`.",
+    body: "Customer sends an email or submits a form. Intake normalizes both into a single ticket queue with source metadata.",
     color: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
   },
   {
@@ -34,7 +34,7 @@ const STEPS = [
   {
     icon: Send,
     title: "6. Send & log",
-    body: "Reply goes back via email (for email tickets) or via the web. The send is processed by the background job queue with retries.",
+    body: "Public replies are sent from support@helpdesk.io for every ticket. Delivery is queued, retried, and logged.",
     color: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200",
   },
   {
@@ -51,7 +51,7 @@ export default function Workflow() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Workflow</h1>
         <p className="text-sm text-slate-500">
-          End-to-end lifecycle of a ticket through HelpDesk — from inbound email to AI auto-resolve or agent reply.
+          End-to-end lifecycle of a unified ticket through HelpDesk — from intake to AI automation or human response.
         </p>
       </div>
 
@@ -81,10 +81,10 @@ export default function Workflow() {
         <div className="card p-4">
           <h2 className="font-semibold">Triggers</h2>
           <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-            <li>• New inbound email → enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">ingest_email</code></li>
+            <li>• New inbound message (email or form) → create ticket + enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">ingest_email</code> when source is email</li>
             <li>• New ticket created → enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">classify_ticket</code> + <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">summarize_ticket</code></li>
             <li>• Classify confidence high & matches KB → enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">auto_resolve</code></li>
-            <li>• Agent sends reply on email ticket → enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">send_email</code></li>
+            <li>• Agent/AI sends public reply → enqueue <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">send_email</code> from support@helpdesk.io</li>
           </ul>
         </div>
         <div className="card p-4">

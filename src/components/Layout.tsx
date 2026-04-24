@@ -4,7 +4,6 @@ import {
   Ticket,
   Users,
   Workflow as WorkflowIcon,
-  Mail,
   Cpu,
   LogOut,
   Sun,
@@ -25,7 +24,6 @@ const NAV: NavItem[] = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
   { to: "/workflow", label: "Workflow", icon: WorkflowIcon, roles: ["admin"] },
-  { to: "/email", label: "Email", icon: Mail, roles: ["admin", "agent"] },
   { to: "/jobs", label: "Background jobs", icon: Cpu, roles: ["admin", "agent"] },
   { to: "/settings", label: "Settings", icon: SettingsIcon, roles: ["admin"] },
 ];
@@ -35,7 +33,10 @@ export function Layout() {
   const { theme, toggle } = useTheme();
   const nav = useNavigate();
 
-  const visible = NAV.filter((n) => !n.roles || (user && n.roles.includes(user.role)));
+  // user.role is always a staff Role at this point — Protected blocks non-staff.
+  const visible = NAV.filter(
+    (n) => !n.roles || (user && n.roles.includes(user.role as Role)),
+  );
 
   return (
     <div className="flex min-h-screen flex-col">

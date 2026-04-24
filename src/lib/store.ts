@@ -80,7 +80,9 @@ export const store = {
   getState: () => state,
   subscribe(cb: () => void) {
     listeners.add(cb);
-    return () => listeners.delete(cb);
+    return () => {
+      listeners.delete(cb);
+    };
   },
   resetSeed() {
     localStorage.removeItem(KEY);

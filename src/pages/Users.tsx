@@ -5,7 +5,7 @@ import { Avatar } from "../components/Avatar";
 import { RoleBadge } from "../components/Badges";
 import { relativeTime } from "../lib/format";
 import { Modal } from "../components/Modal";
-import type { Role, User } from "../lib/types";
+import type { UserRole, User } from "../lib/types";
 import { useAuth } from "../lib/auth";
 
 export default function Users() {
@@ -107,14 +107,14 @@ function UserModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; email: string; password: string; role: Role }) => void;
+  onSave: (data: { name: string; email: string; password: string; role: UserRole }) => void;
   user?: User;
   title: string;
 }) {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>(user?.role ?? "agent");
+  const [role, setRole] = useState<UserRole>(user?.role ?? "agent");
 
   // reset when modal opens with a different user
   useEffect(() => {
@@ -160,7 +160,7 @@ function UserModal({
         <div>
           <label className="label">Role</label>
           <div className="grid grid-cols-3 gap-2">
-            {(["customer", "agent", "admin"] as Role[]).map((r) => (
+            {(["customer", "agent", "admin"] as UserRole[]).map((r) => (
               <button
                 key={r}
                 type="button"

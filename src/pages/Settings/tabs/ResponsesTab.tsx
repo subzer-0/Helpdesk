@@ -34,8 +34,8 @@ export function ResponsesTab({ draft, set }: TabProps) {
   return (
     <div className="space-y-6">
       <Header
-        title="Email responses"
-        sub="Templates for automatic and agent replies sent to customers. Use tokens below to personalize."
+        title="Response templates"
+        sub="Templates used across all tickets. Customer-facing replies are delivered from your support email address."
       />
 
       <TokenReference />
@@ -43,7 +43,7 @@ export function ResponsesTab({ draft, set }: TabProps) {
       <Section>
         <div>
           <div className="text-sm font-medium">Reply signature</div>
-          <p className="mt-0.5 text-xs text-slate-500">Appended to every outbound agent reply.</p>
+          <p className="mt-0.5 text-xs text-slate-500">Appended to every public agent/AI reply sent to customers.</p>
         </div>
         <textarea
           className="input min-h-[90px] font-mono text-xs"
@@ -56,7 +56,7 @@ export function ResponsesTab({ draft, set }: TabProps) {
       <Section>
         <Toggle
           label="Auto-acknowledgement on new ticket"
-          sub="Instantly email the customer to confirm we received their message."
+          sub="Instantly confirm we received the ticket, regardless of intake source."
           checked={draft.autoAckEnabled}
           onChange={(v) => set("autoAckEnabled", v)}
         />
@@ -121,7 +121,7 @@ export function ResponsesTab({ draft, set }: TabProps) {
       <Section>
         <Toggle
           label="AI-drafted reply"
-          sub="Let the AI draft a first reply when a ticket arrives. Agents can review and send, or send is automatic when confidence is above the auto-resolve threshold."
+          sub="Let AI draft first responses. Agents can review and send, or auto-send when confidence exceeds your threshold."
           checked={draft.aiReplyEnabled}
           onChange={(v) => set("aiReplyEnabled", v)}
         />

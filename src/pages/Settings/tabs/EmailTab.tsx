@@ -11,8 +11,8 @@ export function EmailTab({ draft, set }: TabProps) {
   return (
     <div className="space-y-4">
       <Header
-        title="Email integration"
-        sub="Where inbound tickets come from and how outbound replies are sent. These are saved locally in the demo — plug them into your real backend to activate."
+        title="Support channel"
+        sub="All inbound messages (forms + email) become tickets in one queue. Public staff replies are sent from this support channel."
       />
       <Field label="Support email (shown to customers)">
         <input className="input" value={draft.supportEmail} onChange={(e) => set("supportEmail", e.target.value)} />
@@ -20,7 +20,7 @@ export function EmailTab({ draft, set }: TabProps) {
       <Field label="Inbound domain">
         <input className="input" value={draft.inboundDomain} onChange={(e) => set("inboundDomain", e.target.value)} />
         <p className="mt-1 text-xs text-slate-500">
-          Add MX records pointing to your provider for this domain to receive mail.
+          Configure MX/webhook routing so customer replies are attached to the correct ticket thread.
         </p>
       </Field>
       <Field label="Provider">
@@ -55,7 +55,7 @@ export function EmailTab({ draft, set }: TabProps) {
           </button>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Store real keys as a secret on your backend, not in the browser.
+          Store real keys as server-side secrets and never expose them in browser state.
         </p>
       </Field>
     </div>

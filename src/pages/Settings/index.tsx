@@ -23,8 +23,8 @@ import { DangerTab } from "./tabs/DangerTab";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "org", label: "Organization", icon: Building2 },
-  { id: "email", label: "Email", icon: Mail },
-  { id: "responses", label: "Email responses", icon: MessageSquareReply },
+  { id: "email", label: "Support channel", icon: Mail },
+  { id: "responses", label: "Response templates", icon: MessageSquareReply },
   { id: "ai", label: "AI", icon: Sparkles },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "hours", label: "Business hours", icon: Clock },
@@ -56,7 +56,7 @@ export default function SettingsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-slate-500">Manage how HelpDesk is configured for your team.</p>
+          <p className="text-sm text-slate-500">Configure your unified ticket workspace, AI routing, and support delivery settings.</p>
         </div>
         <div className="flex items-center gap-2">
           {toast && (
